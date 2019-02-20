@@ -1,0 +1,40 @@
+#!/bin/sh -eu
+
+################################################################################
+# Create a symlink to this file at ~/.xmonad/build or ~/.config/xmonad/build
+
+################################################################################
+# The name of the executable produced by cabal.  This comes from the
+# executable section of your Cabal file.
+EXE_NAME=xmonad-testing
+
+################################################################################
+# This script will be given a single argument, the path to the
+# executable it should produce.
+output_file="$1"; shift
+
+Fatal()
+{
+	echo "$0: error: $*" 1>&2
+	exit 1
+}
+
+################################################################################
+# The directory holding your source code and Cabal file is determined
+# from the script location after expanding all symlinks.
+script_filename="$(readlink -e "$0")" || Fatal "cannot expand script filename"
+dir="${script_filename%/*}"
+
+################################################################################
+cd "$dir"
+
+# Run autoreconf in x11/ if this is the first build.
+[ -x x11/configure ] || (
+	cd x11
+	autoreconf
+)
+
+cabal new-build
+
+find dist-newstyle -type f -executable -name "$EXE_NAME" \
+	-exec install -p '{}' "$output_file" ';'
